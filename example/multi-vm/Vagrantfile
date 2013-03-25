@@ -1,0 +1,54 @@
+Vagrant.configure("2") do |config|
+
+  # Setup the Master
+  config.vm.define :master do |master|
+      # Set static IP so we can point to master
+      master.vm.network :private_network, ip: "10.11.50.15"
+
+      ## Chose your base box
+      master.vm.box = "precise64"
+
+      ## For local master, mount your file_roots
+      master.vm.synced_folder "salt/roots/", "/srv/"
+
+      # Place minion pub key in accepted keys
+      master.vm.synced_folder "salt/minion_keys/", "/etc/salt/pki/master/minions"
+
+      master.vm.provision :salt do |salt|
+
+        # Config Options
+        salt.master_config = "salt/master"
+
+        # Install a master on this machine
+        salt.install_master = true
+        salt.no_minion = true
+
+      end
+  end
+
+  # Setup the Minion
+  config.vm.define :minion do |minion|
+    # Set static IP so we can point to master
+    minion.vm.network :private_network, ip: "10.11.50.16"
+
+    ## Chose your base box
+    minion.vm.box = "precise64"
+
+    minion.vm.provision :salt do |salt|
+
+      # Config Options
+      # !! Important to point this to master IP
+      # !! Set minion id to match pubkey used above
+      salt.minion_config = "salt/minion"
+
+      # Using pregenerated keys so pub can be placed on master on boot
+      salt.minion_key = "salt/key/minion.pem"
+      salt.minion_pub = "salt/key/minion.pub"
+
+      # Provision the minion!
+      salt.run_highstate = true
+
+    end
+  end  
+
+end
